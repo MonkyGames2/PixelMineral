@@ -1,246 +1,170 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>PixelMineral</title>
-
+<meta charset="UTF-8" />
+<title>Juego de Minería – Preview ChatGPT</title>
 <style>
-body{
-  margin:0;
-  background:#151515;
-  color:#fff;
-  font-family:monospace;
-  text-align:center;
-}
-h1{margin:10px}
-canvas{
-  background:#2a2a2a;
-  border:4px solid #777;
-  image-rendering: pixelated;
-}
-button{
-  margin:6px;
-  padding:10px 18px;
-  font-family:monospace;
-  font-size:18px;
-  background:#444;
-  color:#fff;
-  border:2px solid #999;
-  cursor:pointer;
-}
-button:hover{background:#666}
+ body { background:#1b1b1b; color:#fff; font-family:monospace; text-align:center; }
+ h2 { font-size:32px; }
+ canvas { background:#2a2a2a; border:4px solid #777; margin-top:10px; image-rendering: pixelated; }
+ button { margin:6px; padding:10px 18px; font-family:monospace; font-size:18px; background:#444; color:#fff; border:2px solid #999; cursor:pointer; }
+ button:hover { background:#666; }
 </style>
 </head>
-
 <body>
-<h1>⛏ PixelMineral</h1>
-
-<canvas id="game" width="800" height="520"></canvas><br>
-
-<button id="mineBtn">⛏ MINAR</button>
-<button onclick="togglePickShop()">🛒 PICOS</button>
+<h2>⛏️ Juego de Minería – Preview</h2>
+<canvas id="game" width="800" height="600"></canvas><br>
+<button id="mineBtn">⛏️ MINAR</button>
+<button onclick="togglePickShop()">🛒 TIENDA PICOS</button>
 <button onclick="toggleEnchantShop()">✨ ENCANTAMIENTOS</button>
+<button onclick="toggleMinerShop()">🤖 MINER</button>
 
 <script>
-/* ===================== SETUP ===================== */
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
-ctx.font="18px monospace";
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+ctx.font = "20px monospace";
 
-const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-function beep(freq,dur=0.06){
-  const o=audioCtx.createOscillator();
-  const g=audioCtx.createGain();
-  o.type="square";
-  o.frequency.value=freq;
-  o.connect(g);
-  g.connect(audioCtx.destination);
-  g.gain.value=0.05;
-  o.start();
-  o.stop(audioCtx.currentTime+dur);
-}
-function buySound(){beep(750,0.1)}
-function mineSound(){beep(420,0.03)}
-function breakSound(){beep(130,0.12)}
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function beep(freq,dur=0.05){ const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='square'; o.frequency.value=freq; o.connect(g); g.connect(audioCtx.destination); g.gain.value=0.05; o.start(); o.stop(audioCtx.currentTime+dur); }
+function playBuy(){beep(700,0.1)}
 
-/* ===================== DATOS ===================== */
-let plata=0;
+let plata = Number(localStorage.getItem('plata')) || 0;
+let showPickShop=false, showEnchantShop=false, showMinerShop=false;
+let hoverPick=-1, hoverEnchant=-1, hoverMiner=-1;
 
 const minerals=[
- {n:"Tierra",v:1,w:100,c:"#8b5a2b",hp:60},
- {n:"Piedra",v:2,w:90,c:"#777",hp:120},
- {n:"Carbón",v:5,w:80,c:"#111",hp:180},
- {n:"Hierro",v:10,w:60,c:"#aaa",hp:260},
- {n:"Oro",v:20,w:30,c:"#ffd700",hp:360},
- {n:"Diamante",v:60,w:6,c:"#00ffff",hp:600}
+ {name:"Tierra",value:1,weight:100,color:"#8b5a2b",hp:68},
+ {name:"Piedra",value:2,weight:90,color:"#777",hp:136},
+ {name:"Carbón",value:5,weight:80,color:"#111",hp:200},
+ {name:"Cobre",value:8,weight:70,color:"#c46b32",hp:240},
+ {name:"Hierro",value:10,weight:60,color:"#aaa",hp:272},
+ {name:"Plata",value:15,weight:40,color:"#ddd",hp:360},
+ {name:"Oro",value:20,weight:30,color:"#ffd700",hp:400},
+ {name:"Esmeralda",value:35,weight:20,color:"#00ff99",hp:420},
+ {name:"Rubí",value:45,weight:15,color:"#cc0000",hp:460},
+ {name:"Zafiro",value:42,weight:15,color:"#0044ff",hp:450},
+ {name:"Amatista",value:30,weight:25,color:"#9966ff",hp:380},
+ {name:"Topacio",value:40,weight:18,color:"#ffcc66",hp:430},
+ {name:"Cuarzo",value:25,weight:30,color:"#eeeeee",hp:300},
+ {name:"Obsidiana",value:55,weight:10,color:"#220022",hp:800},
+ {name:"Titanio",value:70,weight:8,color:"#8899aa",hp:700},
+ {name:"Uranio",value:90,weight:4,color:"#66ff00",hp:900},
+ {name:"Mithril",value:120,weight:2,color:"#66ffff",hp:1200},
+ {name:"Netherite",value:150,weight:1,color:"#3a0f0f",hp:1500},
+ {name:"Huevo de Dragón",value:300,weight:0.5,color:"#b000b0",hp:2000},
+
+ /* NUEVOS 15 MINERALES */
+ {name:"Lapislázuli",value:18,weight:35,color:"#1e3aff",hp:350},
+ {name:"Basalto",value:22,weight:32,color:"#2b2b2b",hp:420},
+ {name:"Granito",value:16,weight:38,color:"#b06050",hp:300},
+ {name:"Mármol",value:28,weight:28,color:"#f0f0f0",hp:360},
+ {name:"Ónix",value:60,weight:9,color:"#050505",hp:780},
+ {name:"Ámbar",value:34,weight:22,color:"#ffb000",hp:340},
+ {name:"Jade",value:48,weight:14,color:"#00aa66",hp:480},
+ {name:"Cobalto",value:75,weight:7,color:"#004488",hp:720},
+ {name:"Litio",value:65,weight:9,color:"#ccccff",hp:600},
+ {name:"Azufre",value:26,weight:26,color:"#ffee00",hp:260},
+ {name:"Pirita",value:32,weight:24,color:"#c9b037",hp:330},
+ {name:"Aguamarina",value:52,weight:12,color:"#66ffee",hp:520},
+ {name:"Cristal Oscuro",value:95,weight:4,color:"#330033",hp:980},
+ {name:"Voidstone",value:160,weight:1.5,color:"#000000",hp:1600},
+ {name:"Estelar",value:260,weight:0.8,color:"#ffffff",hp:2200}
 ];
 
 const picks=[
- {n:"Pico de Madera",cost:0,base:50,dmg:5},
- {n:"Pico de Piedra",cost:50,base:150,dmg:8},
- {n:"Pico de Hierro",cost:300,base:400,dmg:18},
- {n:"Pico de Diamante",cost:900,base:1200,dmg:40}
+ {name:"Pico de Madera",cost:0,base:50,damage:5},
+ {name:"Pico de Piedra",cost:50,base:150,damage:8},
+ {name:"Pico de Cobre",cost:150,base:330,damage:12},
+ {name:"Pico de Hierro",cost:400,base:450,damage:18},
+ {name:"Pico de Plata",cost:650,base:520,damage:22},
+ {name:"Pico de Oro",cost:800,base:300,damage:25},
+ {name:"Pico de Esmeralda",cost:1200,base:800,damage:32},
+ {name:"Pico de Diamante",cost:1600,base:1350,damage:40},
+ {name:"Pico de Obsidiana",cost:2600,base:1750,damage:55},
+ {name:"Pico de Mithril",cost:4200,base:2350,damage:75},
+ {name:"Pico de Netherite",cost:6500,base:3000,damage:95},
+ {name:"Pico Legendario",cost:10000,base:4500,damage:130}
 ];
 
-let pick={
- ...picks[0],
- dur:picks[0].base,
- ench:{ef:0,for:0}
-};
+let pick = JSON.parse(localStorage.getItem('pick')) || {...picks[0],dur:picks[0].base,ench:{ef:0,dur:0,for:0}};
+let currentBlock = JSON.parse(localStorage.getItem('currentBlock')) || {...minerals[1],mutation:null,mutColor:null,mutMult:1};
+let blockHP = Number(localStorage.getItem('blockHP')) || currentBlock.hp;
 
-/* ===================== BLOQUE ===================== */
-function randomBlock(){
- let total=minerals.reduce((a,b)=>a+b.w,0);
+function weightedRandom(){
+ let total=minerals.reduce((a,b)=>a+b.weight,0);
  let r=Math.random()*total;
- for(let m of minerals){
-  if(r<m.w) return {...m};
-  r-=m.w;
- }
- return {...minerals[0]};
+ let base=null;
+ for(let m of minerals){if(r<m.weight){base={...m};break} r-=m.weight}
+ if(!base) base={...minerals[0]};
+ const muts=[
+  {name:"Shiny",chance:0.04,multiplier:1.5,color:"#ffd700"},
+  {name:"Rare",chance:0.016,multiplier:2,color:"#4da6ff"},
+  {name:"Exotic",chance:0.005,multiplier:3,color:"#ff4dff"},
+  {name:"Mythic",chance:0.0015,multiplier:5,color:"#ff3333"},
+  {name:"Ancient",chance:0.001,multiplier:6,color:"#ff9933"}
+ ];
+ for(let mu of muts){if(Math.random()<mu.chance){base.mutation=mu.name;base.mutMult=mu.multiplier;base.mutColor=mu.color;break}}
+ return base;
 }
 
-let block=randomBlock();
-let blockHP=block.hp;
-
-/* ===================== GUARDADO ===================== */
-function save(){
- localStorage.setItem("pixelSave",JSON.stringify({
-  plata,
-  pick
- }));
+function saveGame(){
+ localStorage.setItem('plata', plata);
+ localStorage.setItem('pick', JSON.stringify(pick));
+ localStorage.setItem('currentBlock', JSON.stringify(currentBlock));
+ localStorage.setItem('blockHP', blockHP);
 }
 
-function load(){
- const s=localStorage.getItem("pixelSave");
- if(!s) return;
- const d=JSON.parse(s);
- plata=d.plata;
- pick=d.pick;
-}
-load();
-
-/* ===================== MINAR ===================== */
 function mine(){
- if(pick.dur<=0) return;
- mineSound();
+ if(pick.dur<=0)return;
+ beep(400);
  pick.dur--;
- blockHP-=pick.dmg*(1+pick.ench.ef*0.5);
- if(blockHP<=0) breakBlock();
- save();
-}
-
-function breakBlock(){
- breakSound();
- plata+=Math.floor(block.v*(1+pick.ench.for));
- block=randomBlock();
- blockHP=block.hp;
-}
-
-/* ===================== CLICK HOLD ===================== */
-let mining=null;
-const mineBtn=document.getElementById("mineBtn");
-
-mineBtn.onmousedown=()=>{
- if(mining) clearInterval(mining);
- mining=setInterval(mine,120);
-}
-mineBtn.onmouseup=()=>clearInterval(mining);
-mineBtn.onmouseleave=()=>clearInterval(mining);
-mineBtn.onclick=mine;
-
-/* ===================== TIENDAS ===================== */
-let showPickShop=false,showEnchantShop=false;
-let hover=-1;
-
-function togglePickShop(){
- showPickShop=!showPickShop;
- showEnchantShop=false;
-}
-function toggleEnchantShop(){
- showEnchantShop=!showEnchantShop;
- showPickShop=false;
-}
-
-canvas.addEventListener("mousemove",e=>{
- hover=Math.floor((e.offsetY-140)/26);
-});
-canvas.addEventListener("click",()=>{
- if(showPickShop && hover>=0 && hover<picks.length){
-  const p=picks[hover];
-  if(plata>=p.cost){
-   plata-=p.cost;
-   pick={...p,dur:p.base,ench:{ef:0,for:0}};
-   buySound();
-   save();
-  }
- }
- if(showEnchantShop){
-  if(hover===0 && plata>=300){plata-=300;pick.ench.ef++;buySound()}
-  if(hover===1 && plata>=400){plata-=400;pick.ench.for++;buySound()}
-  save();
- }
-});
-
-/* ===================== DIBUJO ===================== */
-function draw(){
- ctx.clearRect(0,0,800,520);
-
- ctx.fillStyle=block.c;
- ctx.fillRect(330,180,140,140);
-
- ctx.fillStyle="#f00";
- ctx.fillRect(330,160,140,10);
- ctx.fillStyle="#0f0";
- ctx.fillRect(330,160,140*(blockHP/block.hp),10);
-
- ctx.fillStyle="#fff";
- ctx.fillText("Plata: "+plata,20,30);
-
- ctx.fillStyle=pick.dur<=0?"#f00":"#fff";
- ctx.fillText(
-  pick.n+
-  " | Dur: "+pick.dur+
-  " | Ef: "+pick.ench.ef+
-  " | For: "+pick.ench.for,
- 20,60
- );
-
- ctx.fillStyle="#fff";
- ctx.fillText("Bloque: "+block.n,345,350);
-
- if(showPickShop){
-  ctx.fillText("TIENDA DE PICOS",20,120);
-  picks.forEach((p,i)=>{
-   if(i===hover){
-    ctx.fillStyle="#0055ff";
-    ctx.fillRect(15,135+i*26,300,24);
-   }
-   ctx.fillStyle="#fff";
-   ctx.fillText(p.n+" $"+p.cost,20,155+i*26);
-  });
- }
-
- if(showEnchantShop){
-  ctx.fillText("ENCANTAMIENTOS",20,120);
-  const ench=[
-   "Eficiencia $300",
-   "Fortuna $400"
-  ];
-  ench.forEach((t,i)=>{
-   if(i===hover){
-    ctx.fillStyle="#0055ff";
-    ctx.fillRect(15,135+i*26,300,24);
-   }
-   ctx.fillStyle="#fff";
-   ctx.fillText(t,20,155+i*26);
-  });
- }
-}
-
-function loop(){
+ blockHP-= pick.damage*(1+pick.ench.ef*0.5);
+ if(blockHP<=0) breakBlock(); saveGame();
  draw();
- requestAnimationFrame(loop);
 }
+function breakBlock(){
+ beep(120,0.1);
+ plata+=Math.floor(currentBlock.value*(currentBlock.mutMult||1)*(1+pick.ench.for));
+ currentBlock=weightedRandom(); saveGame();
+ blockHP=currentBlock.hp;
+}
+
+function togglePickShop(){showPickShop=!showPickShop;showEnchantShop=false;showMinerShop=false;draw()}
+function toggleEnchantShop(){showEnchantShop=!showEnchantShop;showPickShop=false;showMinerShop=false;draw()}
+function toggleMinerShop(){showMinerShop=!showMinerShop;showPickShop=false;showEnchantShop=false;draw()}
+
+let miningInterval=null;
+const mineBtn=document.getElementById('mineBtn');
+mineBtn.addEventListener('click',()=>{mine()});
+mineBtn.addEventListener('mousedown',()=>{if(miningInterval)clearInterval(miningInterval);miningInterval=setInterval(()=>{mine()},120 - pick.ench.dur*2);});
+mineBtn.addEventListener('mouseup',()=>{if(miningInterval)clearInterval(miningInterval);miningInterval=null});
+mineBtn.addEventListener('mouseleave',()=>{if(miningInterval)clearInterval(miningInterval);miningInterval=null});
+
+function loop(){ draw(); requestAnimationFrame(loop);}
+
+function draw(){
+ ctx.clearRect(0,0,800,600);
+ ctx.fillStyle=currentBlock.color;ctx.fillRect(330,220,140,140);
+ let hp=blockHP/currentBlock.hp;
+ ctx.fillStyle="#f00";ctx.fillRect(330,200,140,10);
+ ctx.fillStyle="#0f0";ctx.fillRect(330,200,140*hp,10);
+ ctx.fillStyle=(pick.dur<=0)?"#f00":"#fff";
+ ctx.fillText("Plata: "+plata,20,30);
+ ctx.fillText(pick.name+" | Dur: "+pick.dur+" | Ef: "+pick.ench.ef+" Dur: "+pick.ench.dur+" For: "+pick.ench.for,20,60);
+ ctx.fillText("Bloque: "+currentBlock.name,320,390);
+ if(currentBlock.mutation){ctx.fillStyle=currentBlock.mutColor;ctx.fillText(currentBlock.mutation,340,415);ctx.fillStyle=(pick.dur<=0)?"#f00":"#fff"}
+ if(showPickShop){ctx.fillText("TIENDA DE PICOS",20,130); picks.forEach((p,i)=>{if(i===hoverPick){ctx.fillStyle="#0088ff";ctx.fillRect(15,145+i*26,360,24)}ctx.fillStyle="#fff";ctx.fillText(p.name+" $"+p.cost,20,165+i*26)})}
+ if(showEnchantShop){ctx.fillText("ENCANTAMIENTOS",20,130); [{n:"Eficiencia",c:300},{n:"Durabilidad",c:50},{n:"Fortuna",c:400}].forEach((e,i)=>{if(i===hoverEnchant){ctx.fillStyle="#0088ff";ctx.fillRect(15,145+i*30,360,26)}ctx.fillStyle="#fff";ctx.fillText(e.n+" $"+e.c,20,165+i*30)})}
+ if(showMinerShop){ctx.fillText("MINER",20,130); const opts=[{t:"Comprar Miner",c:400,en:true}]; opts.forEach((o,i)=>{if(i===hoverMiner && o.en){ctx.fillStyle="#0088ff";ctx.fillRect(15,145+i*30,360,26)}ctx.fillStyle=o.en?"#fff":"#777";ctx.fillText(o.t+" $"+o.c,20,165+i*30)})}
+}
+
+canvas.addEventListener('mousemove',e=>{ hoverPick=showPickShop?Math.floor((e.offsetY-145)/26):-1; hoverEnchant=showEnchantShop?Math.floor((e.offsetY-145)/30):-1; hoverMiner=showMinerShop?Math.floor((e.offsetY-145)/30):-1; draw(); });
+canvas.addEventListener('click',()=>{
+ if(showPickShop && hoverPick>=0 && hoverPick<picks.length){let p=picks[hoverPick];if(plata>=p.cost){plata-=p.cost;playBuy();pick={...p,dur:p.base,ench:{ef:0,dur:0,for:0}}; saveGame();}}
+ if(showEnchantShop && hoverEnchant>=0){const enchCosts=[300,50,400];if(plata>=enchCosts[hoverEnchant]){plata-=enchCosts[hoverEnchant];playBuy();if(hoverEnchant===0)pick.ench.ef++; saveGame(); if(hoverEnchant===1){pick.ench.dur++; saveGame();pick.dur+=100;} if(hoverEnchant===2)pick.ench.for++; saveGame();}}
+ if(showMinerShop && hoverMiner>=0){const minerCosts=[400];if(plata>=minerCosts[hoverMiner]){plata-=minerCosts[hoverMiner];playBuy();}}
+});
+
 loop();
 </script>
 </body>
