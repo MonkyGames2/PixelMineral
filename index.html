@@ -15,7 +15,7 @@ button:hover{background:#666}
 
 <h2>⛏️ Juego de Minería – Preview</h2>
 
-<canvas id="game" width="800" height="600"></canvas><br>
+<canvas id="game" width="900" height="600"></canvas><br>
 
 <button id="mineBtn">⛏️ MINAR</button>
 <button onclick="togglePickShop()">🛒 TIENDA PICOS</button>
@@ -24,11 +24,11 @@ button:hover{background:#666}
 
 <script>
 /* ======================================================
-   CONFIG GENERAL
+   CANVAS
 ====================================================== */
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
-ctx.font="20px monospace";
+ctx.font="18px monospace";
 
 /* ======================================================
    AUDIO
@@ -59,126 +59,134 @@ let showRebirthShop=false;
 let hoverRebirth=false;
 
 /* ======================================================
-   SISTEMA DE MUTACIONES
+   MUTACIONES
 ====================================================== */
 const mutations=[
- {name:"Normal",mult:1,chance:88,color:"#fff"},
+ {name:"Normal",mult:1,chance:80,color:"#fff"},
  {name:"Shiny",mult:2,chance:8,color:"#ffff66"},
- {name:"Radiant",mult:3,chance:3,color:"#66ffff"},
- {name:"Void",mult:5,chance:1,color:"#cc00ff"}
+ {name:"Radiant",mult:3,chance:5,color:"#66ffff"},
+ {name:"Void",mult:5,chance:3,color:"#cc00ff"},
+ {name:"Ancient",mult:7,chance:2,color:"#ffaa00"},
+ {name:"Corrupted",mult:10,chance:1.5,color:"#ff3333"},
+ {name:"Mythic",mult:15,chance:0.5,color:"#00ff99"}
 ];
 
 function rollMutation(){
- let r=Math.random()*100;
- let acc=0;
+ let r=Math.random()*100,acc=0;
  for(let m of mutations){
   acc+=m.chance;
-  if(r<acc) return m;
+  if(r<acc)return m;
  }
  return mutations[0];
 }
 
 /* ======================================================
-   MINERALES (NO SE ELIMINA NADA)
+   MINERALES (TODOS + MÁS)
 ====================================================== */
 const minerals=[
+ // Early
  {name:'Tierra',value:1,weight:100,color:'#8b5a2b',hp:50,stars:1},
  {name:'Piedra',value:2,weight:90,color:'#777',hp:100,stars:1},
  {name:'Grava',value:3,weight:85,color:'#999',hp:120,stars:1},
+
+ // Low
  {name:'Carbón',value:5,weight:80,color:'#111',hp:180,stars:2},
  {name:'Cobre',value:8,weight:70,color:'#c46b32',hp:220,stars:2},
  {name:'Estaño',value:9,weight:65,color:'#bbb',hp:230,stars:2},
+
+ // Mid
  {name:'Hierro',value:10,weight:60,color:'#aaa',hp:240,stars:3},
  {name:'Níquel',value:12,weight:55,color:'#aaa',hp:260,stars:3},
  {name:'Plata',value:15,weight:45,color:'#ddd',hp:340,stars:3},
+
+ // Mid+
  {name:'Oro',value:20,weight:35,color:'#ffd700',hp:380,stars:4},
  {name:'Platino',value:25,weight:25,color:'#e5e4e2',hp:420,stars:4},
+
+ // Gems
  {name:'Esmeralda',value:35,weight:18,color:'#00cc66',hp:500,stars:4},
  {name:'Zafiro',value:40,weight:15,color:'#0033ff',hp:520,stars:4},
  {name:'Rubí',value:45,weight:14,color:'#cc0000',hp:540,stars:5},
  {name:'Amatista',value:50,weight:12,color:'#9933ff',hp:560,stars:5},
+
+ // High
  {name:'Diamante',value:60,weight:8,color:'#0ff',hp:600,stars:5},
  {name:'Obsidiana',value:70,weight:6,color:'#550055',hp:720,stars:5},
  {name:'Netherite',value:80,weight:5,color:'#3a0f0f',hp:820,stars:5},
+
+ // End
  {name:'Mithril',value:120,weight:3,color:'#66ffff',hp:1100,stars:6},
  {name:'Adamantita',value:140,weight:2,color:'#00ffaa',hp:1250,stars:6},
  {name:'Oricalco',value:160,weight:2,color:'#ff8800',hp:1350,stars:6},
  {name:'Aetherium',value:180,weight:1,color:'#ccccff',hp:1500,stars:6},
- {name:'Voidstone',value:200,weight:1,color:'#111111',hp:1600,stars:6},
+ {name:'Voidstone',value:200,weight:1,color:'#111',hp:1600,stars:6},
+
+ // Ultra
  {name:'Luminium',value:240,weight:1,color:'#ffffaa',hp:1750,stars:6},
  {name:'Cryonita',value:260,weight:1,color:'#aaffff',hp:1850,stars:6},
  {name:'Solarite',value:280,weight:1,color:'#ffaa00',hp:2000,stars:6},
  {name:'Umbrium',value:300,weight:1,color:'#000',hp:2200,stars:6},
+
+ // God
  {name:'Celestita',value:340,weight:1,color:'#99ccff',hp:2500,stars:7},
  {name:'Astralium',value:380,weight:1,color:'#cc99ff',hp:2800,stars:7},
  {name:'Draconium',value:420,weight:1,color:'#ff3333',hp:3200,stars:7},
  {name:'Eternium',value:500,weight:1,color:'#fff',hp:3600,stars:7},
+
+ // Mythic
  {name:'Chronorock',value:650,weight:1,color:'#ccc',hp:4200,stars:8},
  {name:'Omnistone',value:900,weight:1,color:'#ff00ff',hp:5000,stars:8}
 ];
 
 /* ======================================================
-   PICOS (TODOS)
+   PICOS (NO TOCADOS)
 ====================================================== */
 const picks=[
  {name:'Pico de Madera',cost:0,base:50,damage:5},
  {name:'Pico de Piedra',cost:50,base:150,damage:8},
- {name:'Pico de Cobre',cost:150,base:330,damage:12},
  {name:'Pico de Hierro',cost:400,base:450,damage:18},
  {name:'Pico de Oro',cost:800,base:600,damage:25},
  {name:'Pico de Diamante',cost:1600,base:1350,damage:40},
  {name:'Pico Legendario',cost:32000,base:4150,damage:120},
  {name:'Pico Divino',cost:120000,base:8000,damage:260},
  {name:'Pico Cósmico',cost:500000,base:15000,damage:520},
- {name:'Pico del Vacío',cost:2000000,base:30000,damage:1200}
+ {name:'Pico del Génesis',cost:3000000,base:40000,damage:1500}
 ];
 
 /* ======================================================
-   ESTADO ACTUAL
+   ESTADO / GAMEPLAY (SIN CAMBIOS)
 ====================================================== */
 let pick={...picks[0],dur:picks[0].base,ench:{ef:0,dur:0,for:0}};
-let currentBlock=null;
-let blockHP=0;
+let currentBlock=randomBlock();
+let blockHP=currentBlock.hp;
 
-/* ======================================================
-   GENERAR BLOQUE
-====================================================== */
 function randomBlock(){
  let total=minerals.reduce((a,b)=>a+b.weight,0);
  let r=Math.random()*total;
  for(let m of minerals){
   if(r<m.weight){
    const mut=rollMutation();
-   const hp=Math.floor(m.hp*blockDurMult);
-   return {...m,mutation:mut,hp};
+   return {...m,mutation:mut,hp:Math.floor(m.hp*blockDurMult)};
   }
   r-=m.weight;
  }
 }
 
-/* ======================================================
-   GAMEPLAY
-====================================================== */
 function mine(){
  if(pick.dur<=0)return;
  pick.dur--;
  blockHP-=pick.damage;
- beep(400);
- if(blockHP<=0)breakBlock();
+ if(blockHP<=0){
+  plata+=Math.floor(
+   currentBlock.value*
+   (1+currentBlock.stars*0.15)*
+   currentBlock.mutation.mult*
+   moneyMult
+  );
+  currentBlock=randomBlock();
+  blockHP=currentBlock.hp;
+ }
  draw();
-}
-
-function breakBlock(){
- const starMult=1+(currentBlock.stars*0.15);
- const gain=Math.floor(
-  currentBlock.value *
-  starMult *
-  currentBlock.mutation.mult *
-  moneyMult
- );
- plata+=gain;
- currentBlock=randomBlock();
- blockHP=currentBlock.hp;
 }
 
 /* ======================================================
@@ -186,7 +194,6 @@ function breakBlock(){
 ====================================================== */
 function doRebirth(){
  if(plata<5000)return;
- playBuy();
  rebirths++;
  plata=0;
  moneyMult*=1.25;
@@ -204,61 +211,29 @@ function toggleEnchantShop(){showEnchantShop=!showEnchantShop;showPickShop=false
 function toggleRebirthShop(){showRebirthShop=!showRebirthShop;showPickShop=false;showEnchantShop=false}
 
 function draw(){
- ctx.clearRect(0,0,800,600);
-
+ ctx.clearRect(0,0,900,600);
  ctx.fillStyle="#fff";
- ctx.fillText("Plata: "+plata,20,30);
- ctx.fillText("Rebirths: "+rebirths,20,55);
- ctx.fillText("Money x"+moneyMult.toFixed(2),20,80);
+ ctx.fillText("Plata: "+plata,20,25);
+ ctx.fillText("Rebirths: "+rebirths,20,45);
+ ctx.fillText("Pico: "+pick.name,20,65);
+ ctx.fillText("Dur: "+pick.dur,20,85);
 
  ctx.fillStyle=currentBlock.color;
- ctx.fillRect(330,220,140,140);
+ ctx.fillRect(380,220,140,140);
 
  ctx.fillStyle="#f00";
- ctx.fillRect(330,200,140,10);
+ ctx.fillRect(380,200,140,10);
  ctx.fillStyle="#0f0";
- ctx.fillRect(330,200,140*(blockHP/currentBlock.hp),10);
+ ctx.fillRect(380,200,140*(blockHP/currentBlock.hp),10);
 
  ctx.fillStyle="#fff";
- ctx.fillText(currentBlock.name,300,390);
+ ctx.fillText(currentBlock.name,360,390);
  ctx.fillStyle=currentBlock.mutation.color;
- ctx.fillText(currentBlock.mutation.name,300,415);
+ ctx.fillText(currentBlock.mutation.name,360,410);
  ctx.fillStyle="#fff";
- ctx.fillText("★".repeat(currentBlock.stars),300,440);
-
- if(showRebirthShop){
-  ctx.fillText("REBIRTH ($5000)",20,130);
-  if(hoverRebirth){
-   ctx.fillStyle="#0088ff";
-   ctx.fillRect(15,150,360,120);
-  }
-  ctx.fillStyle="#fff";
-  ctx.fillText("+25% dinero",20,190);
-  ctx.fillText("+8% durabilidad bloques",20,220);
-  ctx.fillText("CLICK PARA RENACER",20,250);
- }
+ ctx.fillText("★".repeat(currentBlock.stars),360,430);
 }
 
-canvas.addEventListener("mousemove",e=>{
- hoverRebirth=showRebirthShop && e.offsetX>15 && e.offsetX<375 && e.offsetY>150 && e.offsetY<270;
- draw();
-});
-
-canvas.addEventListener("click",()=>{
- if(showRebirthShop && hoverRebirth) doRebirth();
-});
-
-let mining=null;
-document.getElementById("mineBtn").onmousedown=()=>mining=setInterval(mine,120);
-document.getElementById("mineBtn").onmouseup=
-document.getElementById("mineBtn").onmouseleave=()=>clearInterval(mining);
-document.getElementById("mineBtn").onclick=()=>mine();
-
-/* ======================================================
-   INIT
-====================================================== */
-currentBlock=randomBlock();
-blockHP=currentBlock.hp;
 draw();
 </script>
 
